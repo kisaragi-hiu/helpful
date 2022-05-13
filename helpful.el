@@ -2252,8 +2252,9 @@ state of the current symbol."
 
     (let ((docstring (helpful--docstring helpful--sym helpful--callable-p))
           (version-info (unless helpful--callable-p
-                          (helpful--version-info helpful--sym))))
-      (when (or docstring version-info)
+                          (helpful--version-info helpful--sym)))
+          (admin-block (helpful--admin-block helpful--sym helpful--callable-p)))
+      (when (or docstring version-info admin-block)
         (helpful--insert-section-break)
         (insert
          (helpful--heading "Documentation"))
@@ -2261,17 +2262,12 @@ state of the current symbol."
           (insert (helpful--format-docstring docstring)))
         (when version-info
           (insert "\n\n" (s-word-wrap 70 version-info)))
+        ;; Not sure if this should be in Documentation or its own section.
+        (when admin-block
+          (insert "\n\n" (s-join "\n" admin-block)))
         (when (and (symbolp helpful--sym) (helpful--in-manual-p helpful--sym))
           (insert "\n\n")
           (insert (helpful--make-manual-button helpful--sym)))))
-
-    (when (and (symbolp helpful--sym))
-      (-when-let (help-fns-output
-                  (helpful--admin-block helpful--sym helpful--callable-p))
-        (helpful--insert-section-break)
-        (insert
-         (helpful--heading "Administrative")
-         help-fns-output)))
 
     ;; Show keybindings.
     ;; TODO: allow users to conveniently add and remove keybindings.
@@ -2523,8 +2519,7 @@ and \"other relevant functions\" section in `describe-function'."
           (unless (= 0 (buffer-size))
             (push (s-trim (buffer-string))
                   ret))))
-      (when ret
-        (s-join "\n" (nreverse ret))))))
+      (nreverse ret))))
 
 ;; TODO: this is broken for -any?.
 (defun helpful--signature (sym)
