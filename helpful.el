@@ -2474,12 +2474,23 @@ The administrative block is the indented \"probably introduced\"
 and \"other relevant functions\" section in `describe-function'."
   (with-temp-buffer
     (let ((standard-output (current-buffer))
-          (hook (if callable-p
-                    help-fns-describe-function-functions
-                  help-fns-describe-variable-functions))
-          ret)
-      ;; TODO: time this versus `run-hook-with-args' + removing
-      ;; leading spaces.
+          hook ret)
+      (setq hook (-> (if callable-p
+                         help-fns-describe-function-functions
+                       help-fns-describe-variable-functions)
+                     (-difference
+                      '(;; These are already handled elsewhere
+                        ;; Implementations
+                        cl--generic-describe
+                        ;; helpful--version-info
+                        help-fns--customize-variable-version
+                        ;; Adds another customize button
+                        help-fns--customize-variable
+                        ;; This belongs in a new section
+                        eieio-help-constructor))))
+      ;; This seems to be slightly faster than using
+      ;; `run-hook-with-args' then removing the leading spaces
+      ;; afterwards.
       (dolist (func hook)
         (erase-buffer)
         (funcall func sym)
