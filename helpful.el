@@ -2488,15 +2488,41 @@ and \"other relevant functions\" section in `describe-function'."
                         help-fns--customize-variable
                         ;; This belongs in a new section
                         eieio-help-constructor))))
-      ;; This seems to be slightly faster than using
-      ;; `run-hook-with-args' then removing the leading spaces
-      ;; afterwards.
-      (dolist (func hook)
-        (erase-buffer)
-        (funcall func sym)
-        (unless (= 0 (buffer-size))
-          (push (s-trim (buffer-string))
-                ret)))
+      (cl-letf*
+          ;; Some *Help* buttons inserted by `help-fns' will call
+          ;; `describe-function' when pressed, which errors out as it
+          ;; is not in a *Help* buffer. This overrides that while they
+          ;; are being created.
+          ((orig (symbol-function 'make-text-button))
+           ((symbol-function 'make-text-button)
+            (lambda (beg end &rest properties)
+              ;; The button type `help-function' (defined in
+              ;; help-mode.el) and the button property `help-function'
+              ;; are different. The type sets the property to
+              ;; `describe-function'.
+              ;;
+              ;; Help buttons all use the function
+              ;; `help-button-action' as their action, which calls the
+              ;; function in the `help-function' prop with arguments
+              ;; from the `help-args' prop.
+              ;;
+              ;; Here we set the prop to `helpful-function' as the
+              ;; button is being created, so when the button is
+              ;; pressed it will do the right thing.
+              (when (eq (plist-get properties 'type) 'help-function)
+                (setq properties
+                      (plist-put properties
+                                 'help-function #'helpful-function)))
+              (apply orig beg end properties))))
+        ;; This seems to be slightly faster than using
+        ;; `run-hook-with-args' then removing the leading spaces
+        ;; afterwards.
+        (dolist (func hook)
+          (erase-buffer)
+          (funcall func sym)
+          (unless (= 0 (buffer-size))
+            (push (s-trim (buffer-string))
+                  ret))))
       (when ret
         (s-join "\n" (nreverse ret))))))
 
