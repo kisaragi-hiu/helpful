@@ -2261,17 +2261,18 @@ state of the current symbol."
           (insert (helpful--format-docstring docstring)))
         (when version-info
           (insert "\n\n" (s-word-wrap 70 version-info)))
-        (when (and (symbolp helpful--sym)
-                   helpful--callable-p)
-          (-when-let (help-fns-output
-                      (helpful--admin-block helpful--sym))
-            (helpful--insert-section-break)
-            (insert
-             (helpful--heading "Administrative")
-             help-fns-output)))
         (when (and (symbolp helpful--sym) (helpful--in-manual-p helpful--sym))
           (insert "\n\n")
           (insert (helpful--make-manual-button helpful--sym)))))
+
+    (when (and (symbolp helpful--sym)
+               helpful--callable-p)
+      (-when-let (help-fns-output
+                  (helpful--admin-block helpful--sym))
+        (helpful--insert-section-break)
+        (insert
+         (helpful--heading "Administrative")
+         help-fns-output)))
 
     ;; Show keybindings.
     ;; TODO: allow users to conveniently add and remove keybindings.
