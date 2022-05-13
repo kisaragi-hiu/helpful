@@ -2265,10 +2265,9 @@ state of the current symbol."
           (insert "\n\n")
           (insert (helpful--make-manual-button helpful--sym)))))
 
-    (when (and (symbolp helpful--sym)
-               helpful--callable-p)
+    (when (and (symbolp helpful--sym))
       (-when-let (help-fns-output
-                  (helpful--admin-block helpful--sym))
+                  (helpful--admin-block helpful--sym helpful--callable-p))
         (helpful--insert-section-break)
         (insert
          (helpful--heading "Administrative")
@@ -2468,17 +2467,20 @@ state of the current symbol."
   ;; parts of the Emacs UI, such as ERT.
   (s-replace " " "\\ " (format "%s" sym)))
 
-(defun helpful--admin-block (sym)
+(defun helpful--admin-block (sym callable-p)
   "Get the administrative block of SYM, as a string.
 
 The administrative block is the indented \"probably introduced\"
 and \"other relevant functions\" section in `describe-function'."
   (with-temp-buffer
     (let ((standard-output (current-buffer))
+          (hook (if callable-p
+                    help-fns-describe-function-functions
+                  help-fns-describe-variable-functions))
           ret)
       ;; TODO: time this versus `run-hook-with-args' + removing
       ;; leading spaces.
-      (dolist (func help-fns-describe-function-functions)
+      (dolist (func hook)
         (erase-buffer)
         (funcall func sym)
         (unless (= 0 (buffer-size))
