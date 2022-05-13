@@ -2263,11 +2263,12 @@ state of the current symbol."
           (insert "\n\n" (s-word-wrap 70 version-info)))
         (when (and (symbolp helpful--sym)
                    helpful--callable-p)
-          (insert "\n\n")
-          (let ((standard-output (current-buffer)))
-            (run-hook-with-args
-             'help-fns-describe-function-functions
-             helpful--sym)))
+          (-when-let (help-fns-output
+                      (helpful--admin-block helpful--sym))
+            (helpful--insert-section-break)
+            (insert
+             (helpful--heading "Administrative")
+             help-fns-output)))
         (when (and (symbolp helpful--sym) (helpful--in-manual-p helpful--sym))
           (insert "\n\n")
           (insert (helpful--make-manual-button helpful--sym)))))
@@ -2465,6 +2466,25 @@ state of the current symbol."
   ;; but that converts foo? to "foo\\?". You can see this in other
   ;; parts of the Emacs UI, such as ERT.
   (s-replace " " "\\ " (format "%s" sym)))
+
+(defun helpful--admin-block (sym)
+  "Get the administrative block of SYM, as a string.
+
+The administrative block is the indented \"probably introduced\"
+and \"other relevant functions\" section in `describe-function'."
+  (with-temp-buffer
+    (let ((standard-output (current-buffer))
+          ret)
+      ;; TODO: time this versus `run-hook-with-args' + removing
+      ;; leading spaces.
+      (dolist (func help-fns-describe-function-functions)
+        (erase-buffer)
+        (funcall func sym)
+        (unless (= 0 (buffer-size))
+          (push (s-trim (buffer-string))
+                ret)))
+      (when ret
+        (s-join "\n" (nreverse ret))))))
 
 ;; TODO: this is broken for -any?.
 (defun helpful--signature (sym)
