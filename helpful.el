@@ -2470,20 +2470,31 @@ The administrative block is the indented \"probably introduced\"
 and \"other relevant functions\" section in `describe-function'."
   (with-temp-buffer
     (let ((standard-output (current-buffer))
+          (inhibit-message t)
           hook ret)
       (setq hook (-> (if callable-p
                          help-fns-describe-function-functions
+                       ;; FIXME: this seems to be new in Emacs 27
                        help-fns-describe-variable-functions)
+                     ;; Remove these functions as they are already
+                     ;; handled elsewhere
                      (-difference
-                      '(;; These are already handled elsewhere
-                        ;; Implementations
-                        cl--generic-describe
-                        ;; helpful--version-info
-                        help-fns--customize-variable-version
-                        ;; Adds another customize button
-                        help-fns--customize-variable
-                        ;; This belongs in a new section
-                        eieio-help-constructor))))
+                      (-non-nil
+                       `(;; Implementations
+                         cl--generic-describe
+                         ;; helpful--version-info
+                         help-fns--customize-variable-version
+                         ;; Adds another customize button
+                         help-fns--customize-variable
+                         ;; This belongs in a new section
+                         eieio-help-constructor
+                         ;; When the first release is "1.1", it is
+                         ;; more likely to be a false positive than not.
+                         ,(when (fboundp #'help-fns--first-release)
+                            (let ((rel (help-fns--first-release sym)))
+                              (when (or (equal "1.1" rel)
+                                        (not rel))
+                                'help-fns--mention-first-release))))))))
       (cl-letf*
           ;; Some *Help* buttons inserted by `help-fns' will call
           ;; `describe-function' when pressed, which errors out as it
