@@ -2528,7 +2528,8 @@ and \"other relevant functions\" section in `describe-function'."
           (erase-buffer)
           (funcall func sym)
           (unless (= 0 (buffer-size))
-            (push (s-trim (buffer-string))
+            (push (s-trim-right
+                   (buffer-string))
                   ret))))
       (nreverse ret))))
 
