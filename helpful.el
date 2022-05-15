@@ -1683,6 +1683,30 @@ POSITION-HEADS takes the form ((123 (defun foo)) (456 (defun bar)))."
                  (or (equal ext "c")
                      (equal ext "rs")))))))))
 
+(defun helpful--sym-feature (sym)
+  "Return the feature that provided SYM."
+  (->> (assoc (symbol-file sym) load-history)
+       (assq 'provide)
+       cdr))
+
+(defun helpful--built-in-p (sym)
+  "Is SYM from a built in feature?"
+  (or (helpful--primitive-p sym t)
+      (helpful--primitive-p sym nil)
+      ;; Shipped as part of Emacs
+      (-when-let (file (symbol-file 'locate-file-completion-table))
+        (f-descendant-of?
+         file
+         (f-parent (find-library-name "subr"))))
+      ;; This catches shadowed symbols. This way even if latest
+      ;; org-mode is loaded instead of the builtin version, `org-mode'
+      ;; would still be considered a built in.
+      (and
+       (require 'finder-inf nil t)
+       (assq (helpful--sym-feature sym)
+             package--builtins)
+       t)))
+
 (defun helpful--sym-value (sym buf)
   "Return the value of SYM in BUF."
   (cond
@@ -2488,13 +2512,15 @@ and \"other relevant functions\" section in `describe-function'."
                          help-fns--customize-variable
                          ;; This belongs in a new section
                          eieio-help-constructor
-                         ;; When the first release is "1.1", it is
-                         ;; more likely to be a false positive than not.
-                         ,(when (fboundp #'help-fns--first-release)
-                            (let ((rel (help-fns--first-release sym)))
-                              (when (or (equal "1.1" rel)
-                                        (not rel))
-                                'help-fns--mention-first-release))))))))
+                         ;; Mention first release only when SYM is
+                         ;; builtin and the first release isn't 1.1.
+                         ,(when (or (not (helpful--built-in-p sym))
+                                    (and
+                                     (fboundp #'help-fns--first-release)
+                                     (let ((rel (help-fns--first-release sym)))
+                                       (or (equal "1.1" rel)
+                                           (not rel)))))
+                            'help-fns--mention-first-release))))))
       (cl-letf*
           ;; Some *Help* buttons inserted by `help-fns' will call
           ;; `describe-function' when pressed, which errors out as it
