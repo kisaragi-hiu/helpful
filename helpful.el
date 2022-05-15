@@ -2508,6 +2508,8 @@ and \"other relevant functions\" section in `describe-function'."
                          cl--generic-describe
                          ;; helpful--version-info
                          help-fns--customize-variable-version
+                         ;; helpful--obsolete-info
+                         help-fns--obsolete
                          ;; Adds another customize button
                          help-fns--customize-variable
                          ;; This belongs in a new section
