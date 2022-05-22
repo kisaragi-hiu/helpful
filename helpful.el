@@ -759,6 +759,17 @@ whether the symbol represents a variable or a callable."
   (shortdoc-display-group (button-get button 'shortdoc-group)
                           (button-get button 'symbol)))
 
+(define-button-type 'helpful-news-button
+  'action #'helpful--news
+  'follow-link t
+  'help-echo "Show corresponding NEWS announcement")
+
+(defun helpful--news (button)
+  "Visit the NEWS file that BUTTON refers to."
+  (view-buffer-other-window
+   (find-file-noselect (button-get button 'file)))
+  (goto-char (button-get button 'pos)))
+
 (defun helpful--split-first-line (docstring)
   "If the first line is a standalone sentence, ensure we have a
 blank line afterwards."
@@ -1301,6 +1312,42 @@ Return nil otherwise."
         (format
          "This variable was added, or its default value changed, in Emacs %s."
          emacs-version))))))
+
+(defun helpful--first-mention (sym)
+  "Find and format the first Emacs release that mentioned SYM.
+
+Based on `help-fns--first-release'."
+  (when (symbolp sym)
+    (-let* ((name (symbol-name sym))
+            (regexp (concat "\\_<" (regexp-quote name) "\\_>"))
+            (news-files (directory-files data-directory t
+                                         (rx bos "NEWS" (or eos "."))))
+            ((version file pos)
+             (with-temp-buffer
+               (let (result)
+                 (dolist (f news-files)
+                   (erase-buffer)
+                   (let ((format-alist nil)
+                         (after-insert-file-functions nil))
+                     (insert-file-contents f))
+                   (goto-char (point-min))
+                   (search-forward "\n*")
+                   (while (re-search-forward regexp nil t)
+                     (let ((pos (match-beginning 0)))
+                       (save-excursion
+                         (when (re-search-backward "^\\* .* Emacs \\([0-9.]+[0-9]\\)" nil t)
+                           (let ((version (match-string 1)))
+                             (when (or (null result)
+                                       (version< version (car result)))
+                               (setq result (list version f pos)))))))))
+                 result))))
+      (when (and version
+                 (not (equal version "1.1")))
+        (format "First mentioned in NEWS for Emacs version %s."
+                (helpful--button
+                 version 'helpful-news-button
+                 'file file
+                 'pos pos))))))
 
 (defun helpful--library-path (library-name)
   "Find the absolute path for the source of LIBRARY-NAME.
@@ -2283,8 +2330,9 @@ state of the current symbol."
 
     (let ((docstring (helpful--docstring helpful--sym helpful--callable-p))
           (version-info (unless helpful--callable-p
-                          (helpful--version-info helpful--sym))))
-      (when (or docstring version-info)
+                          (helpful--version-info helpful--sym)))
+          (first-mention (helpful--first-mention helpful--sym)))
+      (when (or docstring version-info first-mention)
         (helpful--insert-section-break)
         (insert
          (helpful--heading "Documentation"))
@@ -2292,11 +2340,14 @@ state of the current symbol."
           (insert (helpful--format-docstring docstring)))
         (when version-info
           (insert "\n\n" (s-word-wrap 70 version-info)))
+        (when first-mention
+          (insert "\n\n" (s-word-wrap 70 first-mention)))
         (when (and (symbolp helpful--sym)
                    helpful--callable-p
                    (helpful--has-shortdoc-p helpful--sym))
           (insert "\n\n")
           (insert (helpful--make-shortdoc-sentence helpful--sym)))
+        (when (symbolp helpful--sym))
         (when (and (symbolp helpful--sym) (helpful--in-manual-p helpful--sym))
           (insert "\n\n")
           (insert (helpful--make-manual-button helpful--sym)))))

@@ -1065,6 +1065,24 @@ find the source code."
      "This variable was added, or its default value changed, in helpful version 1.2.3.")
     (buffer-string))))
 
+(ert-deftest helpful--first-mention ()
+  "Report which Emacs release first mentions a symbol in its NEWS."
+  ;; `when' is first "mentioned" in 1.1 as an English word. It should
+  ;; not be shown.
+  (save-excursion
+    (helpful-function 'when)
+    (should
+     (not
+      (s-contains-p "First mentioned in NEWS" (buffer-string)))))
+  (save-excursion
+    (helpful-variable 'lexical-binding)
+    (should
+     (s-contains-p
+      (s-word-wrap
+       70
+       "First mentioned in NEWS for Emacs version 24.1.")
+      (buffer-string)))))
+
 (ert-deftest helpful--display-implementations ()
   (require 'xref)
   (helpful-function 'xref-location-marker)
