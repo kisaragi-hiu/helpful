@@ -1797,7 +1797,8 @@ Each advice is returned as a list (WHERE FUNC)."
 (defun helpful--format-head (head)
   "Given a 'head' (the first two symbols of a sexp) format and
 syntax highlight it."
-  (-let* (((def name) head)
+  (-let* ((print-level 1)
+          ((def name) head)
           (formatted-name
            (if (and (consp name) (eq (car name) 'quote))
                (format "'%S" (cadr name))
