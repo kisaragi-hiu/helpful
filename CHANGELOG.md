@@ -1,5 +1,11 @@
 # v0.20 (unreleased)
 
+Fixed an issue where advised functions are treated as primitives if
+they have been native-compiled (#295).
+
+Added support for viewing help for symbols not bound as variables or
+functions.
+
 # v0.19 (released 12th May 2022)
 
 Fixed a hang when looking at functions that had advice but hadn't yet
